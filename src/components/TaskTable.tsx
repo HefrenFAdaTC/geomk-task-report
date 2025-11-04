@@ -55,7 +55,6 @@ const TaskTable = ({ tasks, onEdit, onDelete }: TaskTableProps) => {
                 <TableHead>Título</TableHead>
                 <TableHead>Ticket</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Tipo</TableHead>
                 <TableHead className="text-center">Tempo (dias)</TableHead>
                 <TableHead className="text-center">Pontos</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -71,11 +70,6 @@ const TaskTable = ({ tasks, onEdit, onDelete }: TaskTableProps) => {
                   <TableCell>
                     <Badge variant="outline" className={statusColors[task.status]}>
                       {task.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className={typeColors[task.tipo]}>
-                      {task.tipo}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-center">{task.tempoEstimado}</TableCell>

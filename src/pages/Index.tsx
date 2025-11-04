@@ -3,7 +3,6 @@ import { Plus, FileDown } from "lucide-react";
 import { Task, TaskStats } from "@/types/report";
 import Header from "@/components/Header";
 import StatsCard from "@/components/StatsCard";
-import TaskPieChart from "@/components/TaskPieChart";
 import TaskForm from "@/components/TaskForm";
 import TaskTable from "@/components/TaskTable";
 import { Button } from "@/components/ui/button";
@@ -155,14 +154,9 @@ const Index = () => {
           />
         </div>
 
-        {/* Chart and Table */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-1">
-            <TaskPieChart stats={stats} />
-          </div>
-          <div className="lg:col-span-2">
-            <TaskTable tasks={tasks} onEdit={handleEdit} onDelete={handleDelete} />
-          </div>
+        {/* Table */}
+        <div className="mb-8">
+          <TaskTable tasks={tasks} onEdit={handleEdit} onDelete={handleDelete} />
         </div>
       </main>
     </div>
