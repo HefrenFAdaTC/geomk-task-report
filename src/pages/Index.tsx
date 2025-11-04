@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { Plus, FileDown } from "lucide-react";
+import { Plus, FileDown, LayoutList } from "lucide-react";
 import { Task, TaskStats } from "@/types/report";
 import Header from "@/components/Header";
 import StatsCard from "@/components/StatsCard";
 import TaskForm from "@/components/TaskForm";
 import TaskTable from "@/components/TaskTable";
+import TaskSection from "@/components/TaskSection";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { generatePDF } from "@/utils/pdfGenerator";
 import {
@@ -14,6 +16,7 @@ import {
   Loader2,
   AlertCircle,
   Target,
+  Table as TableIcon,
 } from "lucide-react";
 
 const Index = () => {
@@ -154,10 +157,49 @@ const Index = () => {
           />
         </div>
 
-        {/* Table */}
-        <div className="mb-8">
-          <TaskTable tasks={tasks} onEdit={handleEdit} onDelete={handleDelete} />
-        </div>
+        {/* View Toggle */}
+        <Tabs defaultValue="sections" className="mb-8">
+          <TabsList className="mb-4">
+            <TabsTrigger value="sections" className="gap-2">
+              <LayoutList className="h-4 w-4" />
+              Por Seções
+            </TabsTrigger>
+            <TabsTrigger value="table" className="gap-2">
+              <TableIcon className="h-4 w-4" />
+              Tabela Completa
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="sections">
+            <div className="space-y-4">
+              <TaskSection
+                title="Bloqueadas"
+                tasks={tasks.filter((t) => t.status === "Bloqueada")}
+                statusColor="bg-destructive/20 text-destructive"
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+              <TaskSection
+                title="Em Desenvolvimento"
+                tasks={tasks.filter((t) => t.status === "Em Desenvolvimento")}
+                statusColor="bg-info/20 text-info"
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+              <TaskSection
+                title="Backlog"
+                tasks={tasks.filter((t) => t.status === "Backlog")}
+                statusColor="bg-warning/20 text-warning"
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="table">
+            <TaskTable tasks={tasks} onEdit={handleEdit} onDelete={handleDelete} />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

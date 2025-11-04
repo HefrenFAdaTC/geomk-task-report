@@ -1,5 +1,4 @@
 export type TaskStatus = "Backlog" | "Em Desenvolvimento" | "Bloqueada";
-export type TaskType = "Bug" | "Melhoria" | "Nova Funcionalidade" | "Outro";
 
 export interface Task {
   id: string;
@@ -9,7 +8,7 @@ export interface Task {
   tempoEstimado: number;
   pontoFuncao: number;
   status: TaskStatus;
-  tipo: TaskType;
+  tipo: string;
 }
 
 export interface TaskStats {

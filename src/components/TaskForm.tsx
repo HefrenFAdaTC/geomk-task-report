@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { Task, TaskStatus, TaskType } from "@/types/report";
+import { Task, TaskStatus } from "@/types/report";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,12 +29,11 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
       tempoEstimado: 1,
       pontoFuncao: 1,
       status: "Backlog",
-      tipo: "Melhoria",
+      tipo: "",
     },
   });
 
   const status = watch("status");
-  const tipo = watch("tipo");
 
   return (
     <Card className="mb-6">
@@ -118,17 +117,11 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
 
             <div className="space-y-2">
               <Label htmlFor="tipo">Tipo de Atividade *</Label>
-              <Select value={tipo} onValueChange={(value) => setValue("tipo", value as TaskType)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Bug">Bug</SelectItem>
-                  <SelectItem value="Melhoria">Melhoria</SelectItem>
-                  <SelectItem value="Nova Funcionalidade">Nova Funcionalidade</SelectItem>
-                  <SelectItem value="Outro">Outro</SelectItem>
-                </SelectContent>
-              </Select>
+              <Input
+                id="tipo"
+                {...register("tipo", { required: true })}
+                placeholder="Ex: Bug, Melhoria, Nova Funcionalidade"
+              />
             </div>
           </div>
 
