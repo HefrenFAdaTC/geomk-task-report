@@ -5,6 +5,8 @@ const createPieChartCanvas = (tasks: Task[]): HTMLCanvasElement => {
   const canvas = document.createElement("canvas");
   canvas.width = 200;
   canvas.height = 100;
+
+  
   const ctx = canvas.getContext("2d")!;
   // White background
   ctx.fillStyle = "#ffffff";
