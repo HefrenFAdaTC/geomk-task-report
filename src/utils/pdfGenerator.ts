@@ -45,22 +45,40 @@ const createPieChartCanvas = (tasks: Task[]): HTMLCanvasElement => {
     currentAngle += sliceAngle;
   });
 
-  // Draw legend with percentages
-  let legendY = 20;
-  currentAngle = 0;
+  // Draw legend with percentages - table format below chart
+  let legendY = 220;
+  
+  // Draw table header line
+  ctx.strokeStyle = "#cccccc";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(10, legendY);
+  ctx.lineTo(190, legendY);
+  ctx.stroke();
+  
+  legendY += 15;
+  
   data.forEach((item) => {
     const percentage = ((item.value / total) * 100).toFixed(1);
     
-    ctx.fillStyle = item.color;
-    ctx.fillRect(220, legendY, 15, 15);
-    
+    // Draw row
     ctx.fillStyle = "#000000";
-    ctx.font = "bold 14px Arial";
+    ctx.font = "12px Arial";
     ctx.textAlign = "left";
-    ctx.fillText(`${item.label}`, 240, legendY + 12);
-    ctx.fillText(`${percentage}%`, 240, legendY + 28);
+    ctx.fillText(item.label, 15, legendY);
     
-    legendY += 50;
+    ctx.textAlign = "right";
+    ctx.fillText(`${percentage}%`, 185, legendY);
+    
+    // Draw line separator
+    legendY += 10;
+    ctx.strokeStyle = "#cccccc";
+    ctx.beginPath();
+    ctx.moveTo(10, legendY);
+    ctx.lineTo(190, legendY);
+    ctx.stroke();
+    
+    legendY += 15;
   });
 
   return canvas;
@@ -114,29 +132,29 @@ export const generatePDF = async (tasks: Task[]) => {
     try {
       const chartCanvas = createPieChartCanvas(tasks);
       const chartImage = chartCanvas.toDataURL("image/png");
-      doc.addImage(chartImage, "PNG", 15, yPos, 60, 60);
+      doc.addImage(chartImage, "PNG", 15, yPos, 75, 75);
     } catch (error) {
       console.error("Error generating chart:", error);
     }
   }
 
   // Right side content starts here
-  const rightColX = 90;
+  const rightColX = 105;
   let rightYPos = 70;
   
   // "Previstas" label
-  doc.setFontSize(11);
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
   doc.text("Previstas", rightColX, rightYPos);
   
   // Company info
-  rightYPos += 8;
+  rightYPos += 10;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.text("Empresa: GeoMK Soluções", rightColX, rightYPos);
   
-  rightYPos += 6;
+  rightYPos += 8;
   doc.text("Cliente: Sebrae Ceará", rightColX, rightYPos);
   
   const currentDate = new Date().toLocaleDateString("pt-BR", {
@@ -144,7 +162,7 @@ export const generatePDF = async (tasks: Task[]) => {
     month: "2-digit",
     year: "numeric",
   });
-  rightYPos += 6;
+  rightYPos += 8;
   doc.text(`Data: ${currentDate}`, rightColX, rightYPos);
 
   // Statistics table
@@ -161,87 +179,61 @@ export const generatePDF = async (tasks: Task[]) => {
     doc.line(rightColX, rightYPos, pageWidth - 15, rightYPos);
     
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(10);
     doc.text(label, rightColX + 2, rightYPos + 5);
     doc.text(value, pageWidth - 25, rightYPos + 5);
     
-    rightYPos += 8;
+    rightYPos += 10;
   });
   doc.line(rightColX, rightYPos, pageWidth - 15, rightYPos);
 
-  yPos = Math.max(yPos + 70, rightYPos + 15);
+  yPos = Math.max(yPos + 80, rightYPos + 15);
 
-  // Section title with count
+  // Section title - just the title
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
-  doc.text(`Atividades cadastradas ${tasks.length}`, 15, yPos);
-  yPos += 12;
-
-  // Group tasks by status
-  const tasksByStatus = {
-    "Bloqueada": tasks.filter(t => t.status === "Bloqueada"),
-    "Em Desenvolvimento": tasks.filter(t => t.status === "Em Desenvolvimento"),
-    "Backlog": tasks.filter(t => t.status === "Backlog"),
-  };
+  doc.text("Atividades cadastradas", 15, yPos);
+  yPos += 15;
 
   let taskNumber = 1;
 
-  // Render tasks grouped by status
-  Object.entries(tasksByStatus).forEach(([status, statusTasks]) => {
-    if (statusTasks.length === 0) return;
-
-    // Status section header
+  // Render all tasks in a single numbered list (no grouping by status)
+  tasks.forEach((task) => {
     if (yPos > 250) {
       doc.addPage();
       yPos = 20;
     }
 
+    // Task number and title with # symbol before tipo
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    doc.text(status, 15, yPos);
+    const titleText = `${taskNumber}. #${task.tipo} - ${task.titulo}`;
+    doc.text(titleText, 15, yPos);
     yPos += 10;
 
-    // List tasks in this status
-    statusTasks.forEach((task) => {
-      if (yPos > 250) {
-        doc.addPage();
-        yPos = 20;
-      }
+    // Ticket
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Ticket: ${task.ticket}`, 15, yPos);
+    yPos += 7;
 
-      // Task number and title
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(0, 0, 0);
-      const titleText = `${taskNumber}. ${task.tipo} - ${task.titulo}`;
-      doc.text(titleText, 20, yPos);
-      yPos += 7;
+    // Pontos de Função
+    doc.text(`Pontos de Função: ${task.pontoFuncao} pontos`, 15, yPos);
+    yPos += 7;
 
-      // Ticket
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(60, 60, 60);
-      doc.text(`Ticket: ${task.ticket}`, 20, yPos);
-      yPos += 5;
+    // Estimativa
+    doc.text(`Estimativa: ${task.tempoEstimado} dia${task.tempoEstimado > 1 ? 's' : ''}`, 15, yPos);
+    yPos += 7;
 
-      // Pontos de Função
-      doc.text(`Pontos de Função: ${task.pontoFuncao} pontos`, 20, yPos);
-      yPos += 5;
+    // Description
+    const description = doc.splitTextToSize(`Descrição: ${task.descricao}`, pageWidth - 30);
+    doc.text(description, 15, yPos);
+    yPos += description.length * 5 + 12;
 
-      // Estimativa
-      doc.text(`Estimativa: ${task.tempoEstimado} dia${task.tempoEstimado > 1 ? 's' : ''}`, 20, yPos);
-      yPos += 5;
-
-      // Description
-      const description = doc.splitTextToSize(`Descrição: ${task.descricao}`, pageWidth - 40);
-      doc.text(description, 20, yPos);
-      yPos += description.length * 5 + 10;
-
-      taskNumber++;
-    });
-
-    yPos += 5;
+    taskNumber++;
   });
 
   // Footer on all pages
