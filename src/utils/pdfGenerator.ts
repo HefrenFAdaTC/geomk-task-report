@@ -93,14 +93,22 @@ export const generatePDF = async (tasks: Task[]) => {
   doc.setFont("helvetica", "normal");
   doc.text("GeoMK Soluções • Sebrae Ceará", 50, 25);
 
-  // Title
+  // Title - Large and prominent
   yPos = 50;
-  doc.setFontSize(18);
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
   doc.text("Relatório de Atividades previstas", 15, yPos);
 
-  // Add pie chart
+  // Calculate statistics
+  const stats = {
+    pontos: tasks.reduce((sum, t) => sum + t.pontoFuncao, 0),
+    bloqueada: tasks.filter((t) => t.status === "Bloqueada").length,
+    backlog: tasks.filter((t) => t.status === "Backlog").length,
+    desenvolvimento: tasks.filter((t) => t.status === "Em Desenvolvimento").length,
+  };
+
+  // Add pie chart on the left
   yPos = 65;
   if (tasks.length > 0) {
     try {
@@ -112,41 +120,35 @@ export const generatePDF = async (tasks: Task[]) => {
     }
   }
 
-  // Company info (left side)
-  const leftColX = 90;
-  let leftYPos = 75;
-  doc.setFontSize(10);
+  // Right side content starts here
+  const rightColX = 90;
+  let rightYPos = 70;
+  
+  // "Previstas" label
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
-  doc.text("Previstas", leftColX, leftYPos);
+  doc.text("Previstas", rightColX, rightYPos);
   
-  leftYPos += 8;
+  // Company info
+  rightYPos += 8;
   doc.setFont("helvetica", "normal");
-  doc.text("Empresa: GeoMK Soluções", leftColX, leftYPos);
+  doc.setFontSize(10);
+  doc.text("Empresa: GeoMK Soluções", rightColX, rightYPos);
   
-  leftYPos += 6;
-  doc.text("Cliente: Sebrae Ceará", leftColX, leftYPos);
+  rightYPos += 6;
+  doc.text("Cliente: Sebrae Ceará", rightColX, rightYPos);
   
   const currentDate = new Date().toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
-  leftYPos += 6;
-  doc.text(`Data: ${currentDate}`, leftColX, leftYPos);
+  rightYPos += 6;
+  doc.text(`Data: ${currentDate}`, rightColX, rightYPos);
 
-  // Statistics table (right side)
-  const stats = {
-    pontos: tasks.reduce((sum, t) => sum + t.pontoFuncao, 0),
-    bloqueada: tasks.filter((t) => t.status === "Bloqueada").length,
-    backlog: tasks.filter((t) => t.status === "Backlog").length,
-    desenvolvimento: tasks.filter((t) => t.status === "Em Desenvolvimento").length,
-  };
-
-  const rightColX = leftColX;
-  let rightYPos = leftYPos + 12;
-  
-  // Draw table
+  // Statistics table
+  rightYPos += 12;
   const tableData = [
     ["Total de pontos de função", stats.pontos.toString()],
     ["Bloqueadas", stats.bloqueada.toString()],
@@ -167,50 +169,82 @@ export const generatePDF = async (tasks: Task[]) => {
   });
   doc.line(rightColX, rightYPos, pageWidth - 15, rightYPos);
 
-  yPos = rightYPos + 15;
+  yPos = Math.max(yPos + 70, rightYPos + 15);
 
-  // Section title
+  // Section title with count
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0, 0, 0);
-  doc.text("Atividades cadastradas", 15, yPos);
-  yPos += 10;
+  doc.text(`Atividades cadastradas ${tasks.length}`, 15, yPos);
+  yPos += 12;
 
-  // List all tasks
-  tasks.forEach((task, index) => {
+  // Group tasks by status
+  const tasksByStatus = {
+    "Bloqueada": tasks.filter(t => t.status === "Bloqueada"),
+    "Em Desenvolvimento": tasks.filter(t => t.status === "Em Desenvolvimento"),
+    "Backlog": tasks.filter(t => t.status === "Backlog"),
+  };
+
+  let taskNumber = 1;
+
+  // Render tasks grouped by status
+  Object.entries(tasksByStatus).forEach(([status, statusTasks]) => {
+    if (statusTasks.length === 0) return;
+
+    // Status section header
     if (yPos > 250) {
       doc.addPage();
       yPos = 20;
     }
 
-    // Task number and title
-    doc.setFontSize(12);
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    const titleText = `${index + 1}. ${task.tipo} - ${task.titulo}`;
-    doc.text(titleText, 20, yPos);
-    yPos += 8;
+    doc.text(status, 15, yPos);
+    yPos += 10;
 
-    // Task details
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
-    
-    doc.text(`Ticket: ${task.ticket}`, 25, yPos);
-    yPos += 6;
+    // List tasks in this status
+    statusTasks.forEach((task) => {
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
 
-    doc.text(`Pontos de Função: ${task.pontoFuncao} pontos`, 25, yPos);
-    yPos += 6;
+      // Task number and title
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0, 0, 0);
+      const titleText = `${taskNumber}. ${task.tipo} - ${task.titulo}`;
+      doc.text(titleText, 20, yPos);
+      yPos += 7;
 
-    doc.text(`Estimativa: ${task.tempoEstimado} dia${task.tempoEstimado > 1 ? 's' : ''}`, 25, yPos);
-    yPos += 6;
+      // Ticket
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Ticket: ${task.ticket}`, 20, yPos);
+      yPos += 5;
 
-    const description = doc.splitTextToSize(`Descrição: ${task.descricao}`, pageWidth - 50);
-    doc.text(description, 25, yPos);
-    yPos += description.length * 5 + 8;
+      // Pontos de Função
+      doc.text(`Pontos de Função: ${task.pontoFuncao} pontos`, 20, yPos);
+      yPos += 5;
+
+      // Estimativa
+      doc.text(`Estimativa: ${task.tempoEstimado} dia${task.tempoEstimado > 1 ? 's' : ''}`, 20, yPos);
+      yPos += 5;
+
+      // Description
+      const description = doc.splitTextToSize(`Descrição: ${task.descricao}`, pageWidth - 40);
+      doc.text(description, 20, yPos);
+      yPos += description.length * 5 + 10;
+
+      taskNumber++;
+    });
+
+    yPos += 5;
   });
 
-  // Footer
+  // Footer on all pages
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
@@ -219,7 +253,7 @@ export const generatePDF = async (tasks: Task[]) => {
     doc.setFont("helvetica", "italic");
     doc.setTextColor(150, 150, 150);
     doc.text(
-      `-ganecundo geu Negacio`,
+      "Relatório gerado automaticamente por RelatórioGeoMK © 2025",
       pageWidth / 2,
       pageHeight - 10,
       { align: "center" }
