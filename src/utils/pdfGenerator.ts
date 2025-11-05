@@ -72,18 +72,26 @@ export const generatePDF = async (tasks: Task[]) => {
   const pageHeight = doc.internal.pageSize.height;
   let yPos = 20;
 
-  // Header
+  // Header with logo
   doc.setFillColor(220, 220, 220);
   doc.rect(0, 0, pageWidth, 35, "F");
+  
+  // Load and add logo
+  try {
+    const logoUrl = "/logo-geomk.png";
+    doc.addImage(logoUrl, "PNG", 15, 8, 30, 20);
+  } catch (error) {
+    console.error("Error loading logo:", error);
+  }
   
   doc.setFontSize(22);
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "bold");
-  doc.text("RelatórioGeoMK", 15, 15);
+  doc.text("RelatórioGeoMK", 50, 15);
   
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("GeoMK Soluções • Sebrae Ceará", 15, 25);
+  doc.text("GeoMK Soluções • Sebrae Ceará", 50, 25);
 
   // Title
   yPos = 50;
