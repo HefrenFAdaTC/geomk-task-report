@@ -11,6 +11,7 @@ interface TaskSectionProps {
   statusColor: string;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  onClearAll: () => void;
 }
 
 const typeColors: Record<string, string> = {
@@ -20,7 +21,7 @@ const typeColors: Record<string, string> = {
   Outro: "bg-muted text-muted-foreground",
 };
 
-const TaskSection = ({ title, tasks, statusColor, onEdit, onDelete }: TaskSectionProps) => {
+const TaskSection = ({ title, tasks, statusColor, onEdit, onDelete, onClearAll }: TaskSectionProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
   if (tasks.length === 0) return null;
@@ -33,7 +34,18 @@ const TaskSection = ({ title, tasks, statusColor, onEdit, onDelete }: TaskSectio
             <CardTitle className="text-lg">{title}</CardTitle>
             <Badge className={statusColor}>{tasks.length}</Badge>
           </div>
-          {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={(e) => { e.stopPropagation(); onClearAll(); }}
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir todas
+            </Button>
+            {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+          </div>
         </div>
       </CardHeader>
       {isExpanded && (

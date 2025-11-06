@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Plus, FileDown, LayoutList } from "lucide-react";
-import { Task, TaskStats } from "@/types/report";
+import { Task, TaskStats, TaskStatus } from "@/types/report";
 import Header from "@/components/Header";
 import StatsCard from "@/components/StatsCard";
 import TaskForm from "@/components/TaskForm";
@@ -87,6 +87,17 @@ const Index = () => {
     const updatedTasks = tasks.filter((t) => t.id !== id);
     saveTasks(updatedTasks);
     toast.success("Atividade removida com sucesso!");
+  };
+
+  const handleClearSection = (status: TaskStatus) => {
+    const remaining = tasks.filter((t) => t.status !== status);
+    const removedCount = tasks.length - remaining.length;
+    if (removedCount === 0) {
+      toast.info("Nenhuma atividade para remover nesta seção");
+      return;
+    }
+    saveTasks(remaining);
+    toast.success(`${removedCount} atividade(s) removida(s) de ${status}`);
   };
 
   const handleCancel = () => {
@@ -204,6 +215,7 @@ const Index = () => {
                 statusColor="bg-destructive/20 text-destructive"
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onClearAll={() => handleClearSection("Bloqueada")}
               />
               <TaskSection
                 title="Em Desenvolvimento"
@@ -211,6 +223,7 @@ const Index = () => {
                 statusColor="bg-info/20 text-info"
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onClearAll={() => handleClearSection("Em Desenvolvimento")}
               />
               <TaskSection
                 title="Backlog"
@@ -218,6 +231,7 @@ const Index = () => {
                 statusColor="bg-warning/20 text-warning"
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onClearAll={() => handleClearSection("Backlog")}
               />
             </div>
           </TabsContent>

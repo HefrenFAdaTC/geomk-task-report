@@ -13,11 +13,11 @@ interface JsonImporterProps {
 // Schema for the new JSON structure from uploaded files
 const uploadedTaskSchema = z.object({
   ticket: z.union([z.number(), z.string()]),
-  sistema: z.string().nullable(),
+  sistema: z.string().nullable().optional(),
   status: z.string(),
   title: z.string().min(1, "Título é obrigatório"),
-  estimativa: z.number().nullable(),
-  contagem_apf: z.number().nullable(),
+  estimativa: z.union([z.number(), z.string()]).nullable().optional(),
+  contagem_apf: z.union([z.number(), z.string()]).nullable().optional(),
   description: z.string().min(1, "Descrição é obrigatória"),
 });
 
@@ -58,6 +58,28 @@ const JsonImporter = ({ onImport }: JsonImporterProps) => {
       // Validate data
       const validatedData = jsonSchema.parse(data);
 
+      // Helpers to normalize values
+      const parseNumber = (val: any, def: number = 1): number => {
+        if (val === undefined || val === null) return def;
+        if (typeof val === "number") return isNaN(val) ? def : val;
+        if (typeof val === "string") {
+          const trimmed = val.trim().toLowerCase();
+          if (trimmed === "" || trimmed === "null") return def;
+          const num = parseFloat(trimmed.replace(",", "."));
+          return isNaN(num) ? def : num;
+        }
+        return def;
+      };
+      const parseSystem = (val: any): string => {
+        if (val === undefined || val === null) return "Sem Sistema";
+        if (typeof val === "string") {
+          const trimmed = val.trim();
+          if (trimmed === "" || trimmed.toLowerCase() === "null") return "Sem Sistema";
+          return trimmed;
+        }
+        return "Sem Sistema";
+      };
+
       // Map to internal structure
       const mappedTasks: Omit<Task, "id">[] = validatedData.map((item: any) => {
         // Check if it's the new format or original format
@@ -81,10 +103,10 @@ const JsonImporter = ({ onImport }: JsonImporterProps) => {
             titulo: item.title,
             ticket: ticketStr,
             descricao: item.description,
-            tempoEstimado: item.estimativa || 1,
-            pontoFuncao: item.contagem_apf || 1,
+            tempoEstimado: parseNumber(item.estimativa, 1),
+            pontoFuncao: parseNumber(item.contagem_apf, 1),
             status: status,
-            tipo: item.sistema || "Sem Sistema",
+            tipo: parseSystem(item.sistema),
           };
         } else {
           // Original format - return as is
