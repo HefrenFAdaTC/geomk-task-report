@@ -392,22 +392,34 @@ export async function generatePDF(activities: Activity[]) {
 }
 
 function wrapText(text: string, font: any, fontSize: number, maxWidth: number): string[] {
-  const words = text.split(" ");
+  // Sanitizar o texto removendo caracteres especiais que WinAnsi não suporta
+  const cleanText = text
+    .replace(/[\n\r\t]/g, ' ')  // Remove quebras de linha e tabs
+    .replace(/[^\x20-\x7E\xA0-\xFF]/g, '')  // Remove caracteres não-ASCII problemáticos
+    .trim();
+  
+  const words = cleanText.split(" ").filter(w => w.length > 0);
   const lines: string[] = [];
   let currentLine = "";
 
   for (const word of words) {
     const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const width = font.widthOfTextAtSize(testLine, fontSize);
-    if (width > maxWidth) {
-      lines.push(currentLine);
+    try {
+      const width = font.widthOfTextAtSize(testLine, fontSize);
+      if (width > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    } catch (error) {
+      // Se houver erro ao calcular largura, adiciona a linha atual e continua
+      if (currentLine) lines.push(currentLine);
       currentLine = word;
-    } else {
-      currentLine = testLine;
     }
   }
   if (currentLine) lines.push(currentLine);
-  return lines;
+  return lines.length > 0 ? lines : [cleanText];
 }
 
 export default generatePDF;
