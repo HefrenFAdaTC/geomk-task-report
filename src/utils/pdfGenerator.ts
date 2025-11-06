@@ -12,43 +12,51 @@ interface Activity {
   tipo: string;
 }
 
-// Função para criar o gráfico de pizza programaticamente
-function createPieChartCanvas(activities: Activity[]): HTMLCanvasElement {
+// FUNÇÃO GERADORA DO GRÁFICO EM ALTA RESOLUÇÃO
+function createPieChartCanvas(tasks: Activity[]): HTMLCanvasElement {
+  // === TAMANHO LÓGICO (em tela) ===
+  const logicalWidth = 300;
+  const logicalHeight = 100;
+
+  // === ESCALA PARA ALTA RESOLUÇÃO (3x) ===
+  const scale = 3;
   const canvas = document.createElement("canvas");
-  canvas.width = 400;
-  canvas.height = 300;
-  
+  canvas.width = logicalWidth * scale;
+  canvas.height = logicalHeight * scale;
+
   const ctx = canvas.getContext("2d")!;
-  
+  if (!ctx) throw new Error("Contexto 2D não disponível");
+
+  // Escala o contexto para manter proporção
+  ctx.scale(scale, scale);
+
   // Fundo branco
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
-  // Calcular estatísticas
+  ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
   const stats = {
-    bloqueada: activities.filter((t) => t.status === "Bloqueada").length,
-    desenvolvimento: activities.filter((t) => t.status === "Em Desenvolvimento").length,
-    backlog: activities.filter((t) => t.status === "Backlog").length,
+    bloqueada: tasks.filter((t) => t.status === "Bloqueada").length,
+    desenvolvimento: tasks.filter((t) => t.status === "Em Desenvolvimento").length,
+    backlog: tasks.filter((t) => t.status === "Backlog").length,
   };
-  
+
   const total = stats.bloqueada + stats.desenvolvimento + stats.backlog;
   if (total === 0) return canvas;
-  
-  // Cores profissionais
-  const colors = ["#ef4444", "#3b82f6", "#10b981"];
-  const labels = ["Bloqueadas", "Em Desenvolvimento", "Backlog"];
+
+  const colors = ["#ec3636", "#0FC882", "#3B82F5"];
+  const labels = ["Bloqueadas", "Desenvolvimento", "Backlog"];
   const data = [
     { label: labels[0], value: stats.bloqueada, color: colors[0] },
     { label: labels[1], value: stats.desenvolvimento, color: colors[1] },
     { label: labels[2], value: stats.backlog, color: colors[2] },
   ].filter((d) => d.value > 0);
-  
-  // Desenhar pizza
-  const centerX = 150;
-  const centerY = 150;
-  const radius = 100;
+
+  // Gráfico de pizza
+  const centerX = 60;
+  const centerY = 50;
+  const radius = 40;
   let currentAngle = -Math.PI / 2;
-  
+
   data.forEach((item) => {
     const sliceAngle = (item.value / total) * 2 * Math.PI;
     ctx.beginPath();
@@ -58,54 +66,43 @@ function createPieChartCanvas(activities: Activity[]): HTMLCanvasElement {
     ctx.fillStyle = item.color;
     ctx.fill();
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
     currentAngle += sliceAngle;
   });
-  
+
   // Legenda
-  let legendY = 40;
-  const legendX = 270;
-  const swatchSize = 24;
-  
+  let legendY = 20;
+  const legendX = 110;
+  const swatchSize = 12;
+  const padding = 6;
+
   ctx.textAlign = "left";
   data.forEach((item) => {
     const percentage = ((item.value / total) * 100).toFixed(1);
-    
-    // Quadrado de cor
+
+    // Swatch
     ctx.fillStyle = item.color;
-    ctx.fillRect(legendX, legendY, swatchSize, swatchSize);
-    
-    // Texto do label com quebra de linha se necessário
+    ctx.fillRect(legendX, legendY + 1, swatchSize, swatchSize);
+
+    // Label
     ctx.fillStyle = "#000000";
-    ctx.font = "bold 16px Arial";
-    
-    // Quebrar texto longo
-    const maxWidth = 110;
-    const words = item.label.split(' ');
-    let line = '';
-    let lineY = legendY + 16;
-    
-    for (let i = 0; i < words.length; i++) {
-      const testLine = line + words[i] + ' ';
-      const metrics = ctx.measureText(testLine);
-      if (metrics.width > maxWidth && i > 0) {
-        ctx.fillText(line, legendX + swatchSize + 10, lineY);
-        line = words[i] + ' ';
-        lineY += 18;
-      } else {
-        line = testLine;
-      }
-    }
-    ctx.fillText(line, legendX + swatchSize + 10, lineY);
-    
-    // Número e porcentagem
-    ctx.font = "bold 18px Arial";
-    ctx.fillText(`${item.value} (${percentage}%)`, legendX + swatchSize + 10, lineY + 22);
-    
-    legendY += 70;
+    ctx.font = "italic 8px Arial";
+    ctx.fillText(item.label, legendX + swatchSize + padding, legendY + 8);
+
+    // Contagem
+    ctx.font = "bold 10px Arial";
+    ctx.fillText(`(${item.value})`, legendX + swatchSize + padding, legendY + 18);
+
+    // Porcentagem
+    ctx.textAlign = "right";
+    ctx.font = "bold 10px Arial";
+    ctx.fillText(`${percentage}%`, 190, legendY + 18);
+    ctx.textAlign = "left";
+
+    legendY += 24;
   });
-  
+
   return canvas;
 }
 
@@ -116,6 +113,7 @@ export async function generatePDF(activities: Activity[]) {
   const margin = 50;
   const fontSize = 10;
   const smallSize = 9;
+  const lineHeight = 14;
 
   const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -178,7 +176,7 @@ export async function generatePDF(activities: Activity[]) {
 
   y -= 40;
 
-  // === DADOS DO RELATÓRIO + CARDS ===
+  // === DADOS DO RELATÓRIO ===
   const today = new Date().toLocaleDateString("pt-BR");
   const dados = [
     `Previstas Empresa: GeoMK Soluções`,
@@ -196,6 +194,7 @@ export async function generatePDF(activities: Activity[]) {
     });
   });
 
+  // === CARDS ===
   const totalAtividades = activities.length;
   const totalPontos = activities.reduce((s, a) => s + a.pontoFuncao, 0);
 
@@ -252,21 +251,26 @@ export async function generatePDF(activities: Activity[]) {
     color: rgb(0.15, 0.35, 0.55),
   });
 
-  // === GRÁFICO DE PIZZA À DIREITA ===
+  // === GRÁFICO EM ALTA RESOLUÇÃO ===
   let chartImage;
   try {
     const canvas = createPieChartCanvas(activities);
-    const imgData = canvas.toDataURL("image/png");
+    const imgData = canvas.toDataURL("image/png", 1.0);
     chartImage = await pdfDoc.embedPng(imgData);
   } catch (err) {
     console.warn("Falha ao gerar gráfico:", err);
   }
 
   if (chartImage) {
-    const imgWidth = 200;
-    const imgHeight = 150;
-    const imgX = width - margin - imgWidth;
-    const imgY = y - imgHeight + 20;
+    const logicalWidth = 300;
+    const logicalHeight = 100;
+
+    const imgWidth = logicalWidth;
+    const imgHeight = logicalHeight;
+
+    const imgX = width - margin - imgWidth + 80;
+    const imgY = y - imgHeight + 40;
+
     page.drawImage(chartImage, {
       x: imgX,
       y: imgY,
@@ -275,14 +279,14 @@ export async function generatePDF(activities: Activity[]) {
     });
   }
 
-  y = cardY - 60;
+  y = cardY - 40;
 
   // === AGRUPAR POR STATUS ===
-  const statusOrder = ["Bloqueada", "Em Desenvolvimento", "Backlog"];
+  const statusOrder = ["Bloqueada", "Backlog", "Em Desenvolvimento"];
   const statusColors: Record<string, any> = {
-    "Bloqueada": rgb(0.93, 0.27, 0.27),
-    "Em Desenvolvimento": rgb(0.23, 0.51, 0.96),
-    "Backlog": rgb(0.06, 0.73, 0.51),
+    "Bloqueada": rgb(0.93, 0.21, 0.21),
+    "Backlog": rgb(0.23, 0.51, 0.96),
+    "Em Desenvolvimento": rgb(0.06, 0.78, 0.51),
   };
 
   const grouped = statusOrder.map(status => ({
@@ -291,6 +295,8 @@ export async function generatePDF(activities: Activity[]) {
     count: activities.filter(a => a.status === status).length,
     color: statusColors[status],
   }));
+
+  const contentWidth = width - margin * 2;
 
   for (const group of grouped) {
     if (group.count === 0) continue;
@@ -303,30 +309,28 @@ export async function generatePDF(activities: Activity[]) {
     // Barra de status
     page.drawRectangle({
       x: margin,
-      y: y - 35,
-      width: width - margin * 2,
-      height: 35,
+      y: y - 30,
+      width: contentWidth,
+      height: 30,
       color: group.color,
     });
     page.drawText(group.status, {
-      x: margin + 15,
-      y: y - 22,
-      size: 13,
+      x: margin + 10,
+      y: y - 20,
+      size: fontSize,
       font: fontBold,
       color: rgb(1, 1, 1),
     });
     page.drawText(group.count.toString(), {
-      x: width - margin - 45,
-      y: y - 22,
-      size: 14,
+      x: width - margin - 40,
+      y: y - 20,
+      size: fontSize,
       font: fontBold,
       color: rgb(1, 1, 1),
     });
 
-    y -= 55;
+    y -= 50;
 
-    // Atividades (com indentação)
-    const indent = margin + 20;
     for (let i = 0; i < group.activities.length; i++) {
       const act = group.activities[i];
 
@@ -335,59 +339,48 @@ export async function generatePDF(activities: Activity[]) {
         y = height - margin;
       }
 
-      // TÍTULO
       const area = act.tipo || "undefined";
-      page.drawText(`${i + 1}. ${area} - ${act.titulo}`, {
-        x: indent,
-        y: y,
-        size: fontSize,
-        font: fontBold,
-        color: rgb(0.1, 0.25, 0.4),
-      });
+      const titleText = `${i + 1}. ${area} - ${act.titulo}`;
+      const titleLines = wrapText(titleText, fontBold, fontSize, contentWidth - 20);
 
-      y -= 18;
-
-      // Detalhes
-      page.drawText(`Ticket: ${act.ticket}`, {
-        x: indent,
-        y: y,
-        size: smallSize,
-        font: fontRegular,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-
-      page.drawText(`Pontos de Função: ${act.pontoFuncao} pontos`, {
-        x: indent + 150,
-        y: y,
-        size: smallSize,
-        font: fontRegular,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-
-      page.drawText(`Estimativa: ${act.tempoEstimado} dias`, {
-        x: indent + 320,
-        y: y,
-        size: smallSize,
-        font: fontRegular,
-        color: rgb(0.3, 0.3, 0.3),
-      });
-
-      y -= 18;
-
-      // Descrição com quebra (respeitando a indentação e margem direita)
-      const descLines = wrapText(act.descricao, fontRegular, smallSize, width - indent - margin - 10);
-      descLines.forEach((line, j) => {
+      titleLines.forEach((line, j) => {
         page.drawText(line, {
-          x: indent,
-          y: y - j * 14,
-          size: smallSize,
-          font: fontRegular,
-          color: rgb(0.1, 0.1, 0.1),
-          maxWidth: width - indent - margin,
+          x: margin,
+          y: y - j * lineHeight,
+          size: fontSize,
+          font: fontBold,
+          color: rgb(0.1, 0.25, 0.4),
+          maxWidth: contentWidth,
         });
       });
 
-      y = y - descLines.length * 14 - 25;
+      y -= titleLines.length * lineHeight + 10;
+
+      const detailsText = `Ticket: ${act.ticket}   Pontos de Função: ${act.pontoFuncao} pontos   Estimativa: ${act.tempoEstimado} dias`;
+      page.drawText(detailsText, {
+        x: margin,
+        y: y,
+        size: smallSize,
+        font: fontRegular,
+        color: rgb(0.3, 0.3, 0.3),
+        maxWidth: contentWidth,
+      });
+
+      y -= 18;
+
+      const descLines = wrapText(act.descricao, fontRegular, smallSize, contentWidth - 20);
+      descLines.forEach((line, j) => {
+        page.drawText(line, {
+          x: margin,
+          y: y - j * lineHeight,
+          size: smallSize,
+          font: fontRegular,
+          color: rgb(0.1, 0.1, 0.1),
+          maxWidth: contentWidth,
+        });
+      });
+
+      y = y - descLines.length * lineHeight - 25;
     }
   }
 
