@@ -1,36 +1,54 @@
+// src/utils/pdfGenerator.ts
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
-import jsPDF from "jspdf";
-import { Task } from "@/types/report";
-const createPieChartCanvas = (tasks: Task[]): HTMLCanvasElement => {
+interface Activity {
+  id: string;
+  titulo: string;
+  ticket: string;
+  descricao: string;
+  tempoEstimado: number;
+  pontoFuncao: number;
+  status: string;
+  tipo: string;
+}
+
+// Função para criar o gráfico de pizza programaticamente
+function createPieChartCanvas(activities: Activity[]): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
-  canvas.width = 200;
-  canvas.height = 100;
-
+  canvas.width = 400;
+  canvas.height = 300;
   
   const ctx = canvas.getContext("2d")!;
-  // White background
+  
+  // Fundo branco
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Calcular estatísticas
   const stats = {
-    bloqueada: tasks.filter((t) => t.status === "Bloqueada").length,
-    desenvolvimento: tasks.filter((t) => t.status === "Em Desenvolvimento").length,
-    backlog: tasks.filter((t) => t.status === "Backlog").length,
+    bloqueada: activities.filter((t) => t.status === "Bloqueada").length,
+    desenvolvimento: activities.filter((t) => t.status === "Em Desenvolvimento").length,
+    backlog: activities.filter((t) => t.status === "Backlog").length,
   };
+  
   const total = stats.bloqueada + stats.desenvolvimento + stats.backlog;
   if (total === 0) return canvas;
-  // Professional pie chart colors: Green for Bloqueada, Teal for Desenvolvimento, Blue for Backlog
-  const colors = ["#10b981", "#06b6d4", "#3b82f6"];
-  const labels = ["Bloqueadas", "Desenvolvimento", "Backlog"];
+  
+  // Cores profissionais
+  const colors = ["#ef4444", "#3b82f6", "#10b981"];
+  const labels = ["Bloqueadas", "Em Desenvolvimento", "Backlog"];
   const data = [
     { label: labels[0], value: stats.bloqueada, color: colors[0] },
     { label: labels[1], value: stats.desenvolvimento, color: colors[1] },
     { label: labels[2], value: stats.backlog, color: colors[2] },
   ].filter((d) => d.value > 0);
-  // Draw pie chart on the left
-  const centerX = 60;
-  const centerY = 50;
-  const radius = 40;
+  
+  // Desenhar pizza
+  const centerX = 150;
+  const centerY = 150;
+  const radius = 100;
   let currentAngle = -Math.PI / 2;
+  
   data.forEach((item) => {
     const sliceAngle = (item.value / total) * 2 * Math.PI;
     ctx.beginPath();
@@ -40,201 +58,356 @@ const createPieChartCanvas = (tasks: Task[]): HTMLCanvasElement => {
     ctx.fillStyle = item.color;
     ctx.fill();
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 3;
     ctx.stroke();
     currentAngle += sliceAngle;
   });
-  // Legend on the right, vertically stacked with proper spacing
-  let legendY = 20;
-  const legendX = 110;
-  const swatchSize = 12;
-  const padding = 6; // Best practice spacing: 4-8px gaps
+  
+  // Legenda
+  let legendY = 50;
+  const legendX = 280;
+  const swatchSize = 20;
+  
   ctx.textAlign = "left";
   data.forEach((item) => {
     const percentage = ((item.value / total) * 100).toFixed(1);
-   
-    // Color swatch
+    
+    // Quadrado de cor
     ctx.fillStyle = item.color;
-    ctx.fillRect(legendX, legendY + 1, swatchSize, swatchSize);
-   
-    // Label (smaller font)
+    ctx.fillRect(legendX, legendY, swatchSize, swatchSize);
+    
+    // Texto
     ctx.fillStyle = "#000000";
-    ctx.font = "italic 8px Arial"; // Smaller and italic for labels
-    ctx.fillText(item.label, legendX + swatchSize + padding, legendY + 8);
-   
-    // Count (prominent: bold and slightly larger)
-    ctx.font = "bold 10px Arial";
-    ctx.fillText(`(${item.value})`, legendX + swatchSize + padding, legendY + 18);
-   
-    // Percentage (prominent: bold and right-aligned)
-    ctx.textAlign = "right";
-    ctx.font = "bold 10px Arial";
-    ctx.fillText(`${percentage}%`, 190, legendY + 18);
-    ctx.textAlign = "left";
-   
-    legendY += 24; // Adjusted spacing for two-line items
+    ctx.font = "bold 14px Arial";
+    ctx.fillText(item.label, legendX + swatchSize + 10, legendY + 15);
+    
+    ctx.font = "normal 12px Arial";
+    ctx.fillText(`${item.value} (${percentage}%)`, legendX + swatchSize + 10, legendY + 30);
+    
+    legendY += 60;
   });
+  
   return canvas;
-};
-export const generatePDF = async (tasks: Task[]) => {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  // Dynamic date
-  const currentDate = new Date().toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+}
+
+export async function generatePDF(activities: Activity[]) {
+  const pdfDoc = await PDFDocument.create();
+  let page = pdfDoc.addPage([595.28, 841.89]); // A4
+  const { width, height } = page.getSize();
+  const margin = 50;
+  const fontSize = 10;
+  const smallSize = 9;
+
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  let y = height - margin;
+
+  // === LOGO + TÍTULO ===
+  page.drawText("GeoMK", {
+    x: margin,
+    y: y,
+    size: 20,
+    font: fontBold,
+    color: rgb(0.15, 0.35, 0.55),
   });
-  let pageNum = 1;
-  // ========== COVER-LIKE HEADER ==========
-  // Top header bar
-  doc.setFillColor(248, 249, 250);
-  doc.rect(0, 0, pageWidth, 40, "F");
-  // Logo
-  try {
-    const logoUrl = "/logo-geomk.png";
-    doc.addImage(logoUrl, "PNG", 15, 10, 35, 18); // Slightly decreased size
-  } catch (error) {
-    // Fallback text logo
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("GeoMK", 15, 25);
-  }
-  // Report title
-  doc.setFontSize(22);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(33, 37, 41);
-  doc.text("Relatório de Atividades", pageWidth / 2, 25, { align: "center" });
-  doc.setFontSize(14);
-  doc.text("Previstas", pageWidth / 2, 35, { align: "center" });
-  // Subtitle
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(108, 117, 125);
-  doc.text("GeoMK Soluções • Sebrae Ceará", pageWidth / 2, 42, { align: "center" });
-  // ========== SUMMARY SECTION ==========
-  let yPos = 55;
-  // Side-by-side layout for header: title on left, chart next to it
-  const summaryStartY = yPos;
-  const leftX = 20;
-  const titleWidth = 80; // Approximate width for "Resumo Executivo"
-  const chartX = leftX + titleWidth + 10;
-  const chartWidth = 80;
-  const chartHeight = 40;
-  // Title on left
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(33, 37, 41);
-  doc.text("Resumo Executivo", leftX, summaryStartY);
-  // Pie chart next to title
-  if (tasks.length > 0) {
-    try {
-      const chartCanvas = createPieChartCanvas(tasks);
-      const chartImage = chartCanvas.toDataURL("image/png");
-      doc.addImage(chartImage, "PNG", chartX, summaryStartY - 5, chartWidth, chartHeight); // Slight offset for alignment
-    } catch (error) {
-      console.error("Chart generation error:", error);
-    }
-  }
-  // Info grid below title on left
-  let infoY = summaryStartY + 8;
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(73, 80, 87);
-  const infoLines = [
-    `Empresa: GeoMK Soluções`,
+
+  page.drawText("Conhecendo seu Negócio", {
+    x: margin,
+    y: y - 18,
+    size: smallSize,
+    font: fontRegular,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+
+  page.drawText("RelatórioGeoMK", {
+    x: width - margin - 120,
+    y: y,
+    size: 14,
+    font: fontBold,
+    color: rgb(0.15, 0.35, 0.55),
+  });
+
+  page.drawText("GeoMK Soluções • Sebrae Ceará", {
+    x: width - margin - 140,
+    y: y - 18,
+    size: smallSize,
+    font: fontRegular,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+
+  y -= 50;
+
+  // Linha horizontal
+  page.drawLine({
+    start: { x: margin, y: y + 5 },
+    end: { x: width - margin, y: y + 5 },
+    thickness: 1,
+    color: rgb(0.8, 0.8, 0.8),
+  });
+
+  y -= 20;
+
+  // === TÍTULO DO RELATÓRIO ===
+  page.drawText("Relatório de Atividades previstas", {
+    x: margin,
+    y: y,
+    size: 14,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
+
+  y -= 40;
+
+  // === DADOS DO RELATÓRIO + CARDS ===
+  const today = new Date().toLocaleDateString("pt-BR");
+  const dados = [
+    `Previstas Empresa: GeoMK Soluções`,
     `Cliente: Sebrae Ceará`,
-    `Data: ${currentDate}`,
-    `Total Atividades: ${tasks.length}`,
-    `Total Pontos de Função: ${tasks.reduce((sum, t) => sum + t.pontoFuncao, 0)}`
+    `Data: ${today}`,
   ];
-  infoLines.forEach(line => {
-    doc.text(line, leftX, infoY);
-    infoY += 6;
-  });
-  // Set yPos to bottom of the section + spacing
-  const infoHeight = infoLines.length * 6;
-  const sectionHeight = Math.max(infoHeight + 8, chartHeight);
-  yPos = summaryStartY + sectionHeight + 10;
-  // ========== DETAILED SECTIONS ==========
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor(33, 37, 41);
-  doc.text("Detalhamento por Status", 20, yPos);
-  yPos += 10;
-  const statusOrder = [
-    { key: "Bloqueadas", filter: (t: Task) => t.status === "Bloqueada", color: [52, 211, 153] },
-    { key: "Backlog", filter: (t: Task) => t.status === "Backlog", color: [59, 130, 246] },
-    { key: "Em Desenvolvimento", filter: (t: Task) => t.status === "Em Desenvolvimento", color: [6, 182, 212] }
-  ];
-  statusOrder.forEach(({ key, filter, color }) => {
-    const sectionTasks = tasks.filter(filter);
-    if (sectionTasks.length === 0) return;
-    // Check for page break
-    if (yPos > 260) {
-      addFooter(doc, pageWidth, pageHeight, pageNum);
-      doc.addPage();
-      pageNum++;
-      yPos = 30;
-    }
-    // Section header with colored bar
-    const headerHeight = 8;
-    doc.setFillColor(color[0], color[1], color[2]);
-    doc.rect(20, yPos - headerHeight / 2, pageWidth - 40, headerHeight, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text(`${key} (${sectionTasks.length})`, 25, yPos + 1);
-    yPos += 12;
-    sectionTasks.forEach((task, index) => {
-      if (yPos > 280) {
-        addFooter(doc, pageWidth, pageHeight, pageNum);
-        doc.addPage();
-        pageNum++;
-        yPos = 30;
-      }
-      // Task title
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(33, 37, 41);
-      doc.text(`${index + 1}. ${task.tipo} - ${task.titulo}`, 25, yPos);
-      yPos += 6;
-      // Metadata row
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(108, 117, 125);
-      const daysPlural = task.tempoEstimado > 1 ? 's' : '';
-      const ticketText = `Ticket: #${task.ticket}`;
-      const pontosText = `Pontos de Função: ${task.pontoFuncao}`;
-      const estimativaText = `Estimativa: ${task.tempoEstimado} dia${daysPlural}`;
-      doc.text(ticketText, 25, yPos);
-      const ticketWidth = doc.getTextWidth(ticketText);
-      doc.text(pontosText, 25 + ticketWidth + 5, yPos);
-      const pontosWidth = doc.getTextWidth(pontosText);
-      doc.text(estimativaText, 25 + ticketWidth + pontosWidth + 10, yPos);
-      yPos += 6;
-      // Description
-      doc.setFontSize(9);
-      doc.setTextColor(55, 65, 81);
-      const descText = `Descrição: ${task.descricao}`;
-      const splitDesc = doc.splitTextToSize(descText, pageWidth - 50);
-      doc.text(splitDesc, 25, yPos);
-      yPos += splitDesc.length * 4 + 8;
+
+  dados.forEach((texto, i) => {
+    page.drawText(texto, {
+      x: margin,
+      y: y - i * 16,
+      size: fontSize,
+      font: fontRegular,
+      color: rgb(0.2, 0.2, 0.2),
     });
-    yPos += 5;
   });
-  // Final footer
-  addFooter(doc, pageWidth, pageHeight, pageNum);
-  // Save file
-  const fileName = `relatorio-geomk-${currentDate.replace(/\//g, '-')}.pdf`;
-  doc.save(fileName);
-};
-// Helper for footer
-const addFooter = (doc: any, pageWidth: number, pageHeight: number, pageNum: number) => {
-  doc.setFontSize(8);
-  doc.setFont("helvetica", "italic");
-  doc.setTextColor(173, 216, 230);
-  doc.text(`Página ${pageNum}`, pageWidth - 50, pageHeight - 10);
-  doc.text("Relatório gerado por GeoMK Soluções © 2025", pageWidth / 2, pageHeight - 10, { align: "center" });
-};
+
+  const totalAtividades = activities.length;
+  const totalPontos = activities.reduce((s, a) => s + a.pontoFuncao, 0);
+
+  const cardY = y - 100;
+  const cardWidth = 100;
+  const cardHeight = 35;
+  const cardSpacing = 20;
+
+  // Card 1
+  page.drawRectangle({
+    x: margin,
+    y: cardY,
+    width: cardWidth + 8,
+    height: cardHeight,
+    borderColor: rgb(0.8, 0.8, 0.8),
+    borderWidth: 1,
+    color: rgb(1, 1, 1),
+  });
+  page.drawText("Atividades cadastradas", {
+    x: margin + 8,
+    y: cardY + 18,
+    size: smallSize,
+    font: fontRegular,
+  });
+  page.drawText(totalAtividades.toString(), {
+    x: margin + 8,
+    y: cardY + 5,
+    size: 16,
+    font: fontBold,
+    color: rgb(0.15, 0.35, 0.55),
+  });
+
+  // Card 2
+  page.drawRectangle({
+    x: margin + cardWidth + cardSpacing,
+    y: cardY,
+    width: cardWidth + 40,
+    height: cardHeight,
+    borderColor: rgb(0.8, 0.8, 0.8),
+    borderWidth: 1,
+    color: rgb(1, 1, 1),
+  });
+  page.drawText("Total de pontos de função", {
+    x: margin + cardWidth + cardSpacing + 8,
+    y: cardY + 18,
+    size: smallSize,
+    font: fontRegular,
+  });
+  page.drawText(totalPontos.toString(), {
+    x: margin + cardWidth + cardSpacing + 8,
+    y: cardY + 5,
+    size: 16,
+    font: fontBold,
+    color: rgb(0.15, 0.35, 0.55),
+  });
+
+  // === GRÁFICO DE PIZZA À DIREITA ===
+  let chartImage;
+  try {
+    const canvas = createPieChartCanvas(activities);
+    const imgData = canvas.toDataURL("image/png");
+    chartImage = await pdfDoc.embedPng(imgData);
+  } catch (err) {
+    console.warn("Falha ao gerar gráfico:", err);
+  }
+
+  if (chartImage) {
+    const imgWidth = 200;
+    const imgHeight = 150;
+    const imgX = width - margin - imgWidth;
+    const imgY = y - imgHeight + 20;
+    page.drawImage(chartImage, {
+      x: imgX,
+      y: imgY,
+      width: imgWidth,
+      height: imgHeight,
+    });
+  }
+
+  y = cardY - 60;
+
+  // === AGRUPAR POR STATUS ===
+  const statusOrder = ["Bloqueada", "Em Desenvolvimento", "Backlog"];
+  const statusColors: Record<string, any> = {
+    "Bloqueada": rgb(0.93, 0.27, 0.27),
+    "Em Desenvolvimento": rgb(0.23, 0.51, 0.96),
+    "Backlog": rgb(0.06, 0.73, 0.51),
+  };
+
+  const grouped = statusOrder.map(status => ({
+    status,
+    activities: activities.filter(a => a.status === status),
+    count: activities.filter(a => a.status === status).length,
+    color: statusColors[status],
+  }));
+
+  for (const group of grouped) {
+    if (group.count === 0) continue;
+
+    if (y < 180) {
+      page = pdfDoc.addPage([595.28, 841.89]);
+      y = height - margin;
+    }
+
+    // Barra de status
+    page.drawRectangle({
+      x: margin,
+      y: y - 30,
+      width: width - margin * 2,
+      height: 30,
+      color: group.color,
+    });
+    page.drawText(group.status, {
+      x: margin + 10,
+      y: y - 20,
+      size: fontSize,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+    page.drawText(group.count.toString(), {
+      x: width - margin - 40,
+      y: y - 20,
+      size: fontSize,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+
+    y -= 50;
+
+    // Atividades
+    for (let i = 0; i < group.activities.length; i++) {
+      const act = group.activities[i];
+
+      if (y < 220) {
+        page = pdfDoc.addPage([595.28, 841.89]);
+        y = height - margin;
+      }
+
+      // TÍTULO
+      const area = act.tipo || "undefined";
+      page.drawText(`${i + 1}. ${area} - ${act.titulo}`, {
+        x: margin,
+        y: y,
+        size: fontSize,
+        font: fontBold,
+        color: rgb(0.1, 0.25, 0.4),
+      });
+
+      y -= 18;
+
+      // Detalhes
+      page.drawText(`Ticket: ${act.ticket}`, {
+        x: margin,
+        y: y,
+        size: smallSize,
+        font: fontRegular,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+
+      page.drawText(`Pontos de Função: ${act.pontoFuncao} pontos`, {
+        x: margin + 150,
+        y: y,
+        size: smallSize,
+        font: fontRegular,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+
+      page.drawText(`Estimativa: ${act.tempoEstimado} dias`, {
+        x: margin + 320,
+        y: y,
+        size: smallSize,
+        font: fontRegular,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+
+      y -= 18;
+
+      // Descrição com quebra
+      const descLines = wrapText(act.descricao, fontRegular, smallSize, width - margin * 2 - 20);
+      descLines.forEach((line, j) => {
+        page.drawText(line, {
+          x: margin,
+          y: y - j * 14,
+          size: smallSize,
+          font: fontRegular,
+          color: rgb(0.1, 0.1, 0.1),
+          maxWidth: width - margin * 2,
+        });
+      });
+
+      y = y - descLines.length * 14 - 25;
+    }
+  }
+
+  // === RODAPÉ ===
+  page.drawText("GeoMK Soluções • Sebrae Ceará", {
+    x: margin,
+    y: 30,
+    size: smallSize,
+    font: fontRegular,
+    color: rgb(0.4, 0.4, 0.4),
+  });
+
+  // === DOWNLOAD ===
+  const pdfBytes = await pdfDoc.save();
+  const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Relatorio_GeoMK_${new Date().toISOString().slice(0, 10)}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function wrapText(text: string, font: any, fontSize: number, maxWidth: number): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const width = font.widthOfTextAtSize(testLine, fontSize);
+    if (width > maxWidth) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  return lines;
+}
+
+export default generatePDF;
