@@ -64,9 +64,9 @@ function createPieChartCanvas(activities: Activity[]): HTMLCanvasElement {
   });
   
   // Legenda
-  let legendY = 50;
-  const legendX = 280;
-  const swatchSize = 20;
+  let legendY = 40;
+  const legendX = 270;
+  const swatchSize = 24;
   
   ctx.textAlign = "left";
   data.forEach((item) => {
@@ -76,15 +76,34 @@ function createPieChartCanvas(activities: Activity[]): HTMLCanvasElement {
     ctx.fillStyle = item.color;
     ctx.fillRect(legendX, legendY, swatchSize, swatchSize);
     
-    // Texto
+    // Texto do label com quebra de linha se necessário
     ctx.fillStyle = "#000000";
-    ctx.font = "bold 14px Arial";
-    ctx.fillText(item.label, legendX + swatchSize + 10, legendY + 15);
+    ctx.font = "bold 16px Arial";
     
-    ctx.font = "normal 12px Arial";
-    ctx.fillText(`${item.value} (${percentage}%)`, legendX + swatchSize + 10, legendY + 30);
+    // Quebrar texto longo
+    const maxWidth = 110;
+    const words = item.label.split(' ');
+    let line = '';
+    let lineY = legendY + 16;
     
-    legendY += 60;
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + ' ';
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && i > 0) {
+        ctx.fillText(line, legendX + swatchSize + 10, lineY);
+        line = words[i] + ' ';
+        lineY += 18;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line, legendX + swatchSize + 10, lineY);
+    
+    // Número e porcentagem
+    ctx.font = "bold 18px Arial";
+    ctx.fillText(`${item.value} (${percentage}%)`, legendX + swatchSize + 10, lineY + 22);
+    
+    legendY += 70;
   });
   
   return canvas;
@@ -284,29 +303,30 @@ export async function generatePDF(activities: Activity[]) {
     // Barra de status
     page.drawRectangle({
       x: margin,
-      y: y - 30,
+      y: y - 35,
       width: width - margin * 2,
-      height: 30,
+      height: 35,
       color: group.color,
     });
     page.drawText(group.status, {
-      x: margin + 10,
-      y: y - 20,
-      size: fontSize,
+      x: margin + 15,
+      y: y - 22,
+      size: 13,
       font: fontBold,
       color: rgb(1, 1, 1),
     });
     page.drawText(group.count.toString(), {
-      x: width - margin - 40,
-      y: y - 20,
-      size: fontSize,
+      x: width - margin - 45,
+      y: y - 22,
+      size: 14,
       font: fontBold,
       color: rgb(1, 1, 1),
     });
 
-    y -= 50;
+    y -= 55;
 
-    // Atividades
+    // Atividades (com indentação)
+    const indent = margin + 20;
     for (let i = 0; i < group.activities.length; i++) {
       const act = group.activities[i];
 
@@ -318,7 +338,7 @@ export async function generatePDF(activities: Activity[]) {
       // TÍTULO
       const area = act.tipo || "undefined";
       page.drawText(`${i + 1}. ${area} - ${act.titulo}`, {
-        x: margin,
+        x: indent,
         y: y,
         size: fontSize,
         font: fontBold,
@@ -329,7 +349,7 @@ export async function generatePDF(activities: Activity[]) {
 
       // Detalhes
       page.drawText(`Ticket: ${act.ticket}`, {
-        x: margin,
+        x: indent,
         y: y,
         size: smallSize,
         font: fontRegular,
@@ -337,7 +357,7 @@ export async function generatePDF(activities: Activity[]) {
       });
 
       page.drawText(`Pontos de Função: ${act.pontoFuncao} pontos`, {
-        x: margin + 150,
+        x: indent + 150,
         y: y,
         size: smallSize,
         font: fontRegular,
@@ -345,7 +365,7 @@ export async function generatePDF(activities: Activity[]) {
       });
 
       page.drawText(`Estimativa: ${act.tempoEstimado} dias`, {
-        x: margin + 320,
+        x: indent + 320,
         y: y,
         size: smallSize,
         font: fontRegular,
@@ -354,16 +374,16 @@ export async function generatePDF(activities: Activity[]) {
 
       y -= 18;
 
-      // Descrição com quebra
-      const descLines = wrapText(act.descricao, fontRegular, smallSize, width - margin * 2 - 20);
+      // Descrição com quebra (respeitando a indentação e margem direita)
+      const descLines = wrapText(act.descricao, fontRegular, smallSize, width - indent - margin - 10);
       descLines.forEach((line, j) => {
         page.drawText(line, {
-          x: margin,
+          x: indent,
           y: y - j * 14,
           size: smallSize,
           font: fontRegular,
           color: rgb(0.1, 0.1, 0.1),
-          maxWidth: width - margin * 2,
+          maxWidth: width - indent - margin,
         });
       });
 
