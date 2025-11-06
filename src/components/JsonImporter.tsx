@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Task } from "@/types/report";
+import { Task, TaskStatus } from "@/types/report";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Upload, FileJson } from "lucide-react";
@@ -10,7 +10,19 @@ interface JsonImporterProps {
   onImport: (tasks: Omit<Task, "id">[]) => void;
 }
 
-const taskSchema = z.object({
+// Schema for the new JSON structure from uploaded files
+const uploadedTaskSchema = z.object({
+  ticket: z.union([z.number(), z.string()]),
+  sistema: z.string().nullable(),
+  status: z.string(),
+  title: z.string().min(1, "Título é obrigatório"),
+  estimativa: z.number().nullable(),
+  contagem_apf: z.number().nullable(),
+  description: z.string().min(1, "Descrição é obrigatória"),
+});
+
+// Schema for the original structure (backward compatibility)
+const originalTaskSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
   ticket: z.string().min(1, "Ticket é obrigatório"),
   descricao: z.string().min(1, "Descrição é obrigatória"),
@@ -20,7 +32,7 @@ const taskSchema = z.object({
   tipo: z.string().min(1, "Tipo é obrigatório"),
 });
 
-const jsonSchema = z.array(taskSchema);
+const jsonSchema = z.array(z.union([uploadedTaskSchema, originalTaskSchema]));
 
 const JsonImporter = ({ onImport }: JsonImporterProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,13 +56,47 @@ const JsonImporter = ({ onImport }: JsonImporterProps) => {
       const data = JSON.parse(text);
 
       // Validate data
-      const validatedTasks = jsonSchema.parse(data) as Omit<Task, "id">[];
+      const validatedData = jsonSchema.parse(data);
 
-      onImport(validatedTasks);
+      // Map to internal structure
+      const mappedTasks: Omit<Task, "id">[] = validatedData.map((item: any) => {
+        // Check if it's the new format or original format
+        if ("title" in item) {
+          // New format - map fields
+          const ticketStr = typeof item.ticket === "number" 
+            ? `#${item.ticket}` 
+            : item.ticket.startsWith("#") ? item.ticket : `#${item.ticket}`;
+          
+          // Convert status "Bloqueado" to "Bloqueada"
+          let status: TaskStatus = "Backlog";
+          if (item.status === "Em Desenvolvimento") {
+            status = "Em Desenvolvimento";
+          } else if (item.status === "Bloqueado" || item.status === "Bloqueada") {
+            status = "Bloqueada";
+          } else if (item.status === "Backlog") {
+            status = "Backlog";
+          }
+
+          return {
+            titulo: item.title,
+            ticket: ticketStr,
+            descricao: item.description,
+            tempoEstimado: item.estimativa || 1,
+            pontoFuncao: item.contagem_apf || 1,
+            status: status,
+            tipo: item.sistema || "Sem Sistema",
+          };
+        } else {
+          // Original format - return as is
+          return item as Omit<Task, "id">;
+        }
+      });
+
+      onImport(mappedTasks);
 
       toast({
         title: "Sucesso!",
-        description: `${validatedTasks.length} atividade(s) importada(s) com sucesso`,
+        description: `${mappedTasks.length} atividade(s) importada(s) com sucesso`,
       });
 
       // Reset input
@@ -110,8 +156,27 @@ const JsonImporter = ({ onImport }: JsonImporterProps) => {
           Selecionar Arquivo JSON
         </Button>
         <div className="mt-4 text-sm text-muted-foreground">
-          <p className="font-semibold mb-2">Formato esperado:</p>
-          <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs">
+          <p className="font-semibold mb-2">Formatos aceitos:</p>
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs font-medium mb-1">Formato 1 (Freshdesk):</p>
+              <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs">
+{`[
+  {
+    "ticket": 164269,
+    "sistema": "Portal de Serviços",
+    "status": "Em Desenvolvimento",
+    "title": "Título da atividade",
+    "estimativa": 8,
+    "contagem_apf": 47,
+    "description": "Descrição detalhada"
+  }
+]`}
+              </pre>
+            </div>
+            <div>
+              <p className="text-xs font-medium mb-1">Formato 2 (Original):</p>
+              <pre className="bg-muted p-3 rounded-md overflow-x-auto text-xs">
 {`[
   {
     "titulo": "Nome da atividade",
@@ -123,7 +188,9 @@ const JsonImporter = ({ onImport }: JsonImporterProps) => {
     "tipo": "Bug"
   }
 ]`}
-          </pre>
+              </pre>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
