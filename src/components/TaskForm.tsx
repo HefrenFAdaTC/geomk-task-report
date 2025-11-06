@@ -35,16 +35,20 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
 
   const status = watch("status");
 
+  const handleFormSubmit = (data: Omit<Task, "id">) => {
+    // Convert empty strings or "null" to default values
+    const cleanedData = {
+      ...data,
+      tempoEstimado: data.tempoEstimado || 1,
+      pontoFuncao: data.pontoFuncao || 1,
+      tipo: data.tipo && data.tipo.toLowerCase() !== "null" ? data.tipo : "Sem Sistema",
+    };
+    onSubmit(cleanedData);
+  };
+
   return (
-    <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>{task ? "Editar Atividade" : "Nova Atividade"}</CardTitle>
-        <Button variant="ghost" size="icon" onClick={onCancel}>
-          <X className="h-4 w-4" />
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div>
+      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="titulo">Título *</Label>
@@ -77,23 +81,27 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="tempoEstimado">Tempo Estimado (dias) *</Label>
+              <Label htmlFor="tempoEstimado">Tempo Estimado (dias)</Label>
               <Input
                 id="tempoEstimado"
                 type="number"
-                min="1"
-                {...register("tempoEstimado", { required: true, valueAsNumber: true })}
+                min="0"
+                placeholder="1"
+                {...register("tempoEstimado", { valueAsNumber: true })}
               />
+              <p className="text-xs text-muted-foreground">Deixe vazio ou digite "null" para valor padrão (1 dia)</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pontoFuncao">Ponto de Função *</Label>
+              <Label htmlFor="pontoFuncao">Ponto de Função</Label>
               <Input
                 id="pontoFuncao"
                 type="number"
-                min="1"
-                {...register("pontoFuncao", { required: true, valueAsNumber: true })}
+                min="0"
+                placeholder="1"
+                {...register("pontoFuncao", { valueAsNumber: true })}
               />
+              <p className="text-xs text-muted-foreground">Deixe vazio ou digite "null" para valor padrão (1 ponto)</p>
             </div>
           </div>
 
@@ -116,12 +124,13 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tipo">Tipo de Atividade *</Label>
+              <Label htmlFor="tipo">Tipo de Atividade / Sistema</Label>
               <Input
                 id="tipo"
-                {...register("tipo", { required: true })}
-                placeholder="Ex: Bug, Melhoria, Nova Funcionalidade"
+                {...register("tipo")}
+                placeholder="Ex: Portal de Serviços, Bug, Melhoria"
               />
+              <p className="text-xs text-muted-foreground">Deixe vazio ou digite "null" para "Sem Sistema"</p>
             </div>
           </div>
 
@@ -132,8 +141,7 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
             <Button type="submit">{task ? "Atualizar" : "Salvar"}</Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+    </div>
   );
 };
 

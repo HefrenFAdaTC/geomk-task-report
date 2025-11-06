@@ -9,6 +9,7 @@ import TaskSection from "@/components/TaskSection";
 import JsonImporter from "@/components/JsonImporter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { generatePDF } from "@/utils/pdfGenerator";
 import {
@@ -138,10 +139,20 @@ const Index = () => {
           <JsonImporter onImport={handleImportJson} />
         </div>
 
-        {/* Form */}
-        {showForm && (
-          <TaskForm task={editingTask || undefined} onSubmit={handleSubmit} onCancel={handleCancel} />
-        )}
+        {/* Form Dialog */}
+        <Dialog open={showForm} onOpenChange={(open) => {
+          setShowForm(open);
+          if (!open) {
+            setEditingTask(null);
+          }
+        }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingTask ? "Editar Atividade" : "Nova Atividade"}</DialogTitle>
+            </DialogHeader>
+            <TaskForm task={editingTask || undefined} onSubmit={handleSubmit} onCancel={handleCancel} />
+          </DialogContent>
+        </Dialog>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
