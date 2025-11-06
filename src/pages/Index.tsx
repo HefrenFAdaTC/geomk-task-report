@@ -6,6 +6,7 @@ import StatsCard from "@/components/StatsCard";
 import TaskForm from "@/components/TaskForm";
 import TaskTable from "@/components/TaskTable";
 import TaskSection from "@/components/TaskSection";
+import JsonImporter from "@/components/JsonImporter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -101,6 +102,15 @@ const Index = () => {
     toast.success("Relatório PDF gerado com sucesso!");
   };
 
+  const handleImportJson = (importedTasks: Omit<Task, "id">[]) => {
+    const newTasks: Task[] = importedTasks.map((taskData) => ({
+      ...taskData,
+      id: Date.now().toString() + Math.random().toString(),
+    }));
+    saveTasks([...tasks, ...newTasks]);
+    toast.success(`${newTasks.length} atividade(s) importada(s) com sucesso!`);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -121,6 +131,11 @@ const Index = () => {
             <FileDown className="h-4 w-4" />
             Gerar Relatório PDF
           </Button>
+        </div>
+
+        {/* JSON Importer */}
+        <div className="mb-8">
+          <JsonImporter onImport={handleImportJson} />
         </div>
 
         {/* Form */}

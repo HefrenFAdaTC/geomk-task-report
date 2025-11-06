@@ -180,7 +180,7 @@ export const generatePDF = async (tasks: Task[]) => {
     }
     // Section header with colored bar
     const headerHeight = 8;
-    doc.setFillColor(...color);
+    doc.setFillColor(color[0], color[1], color[2]);
     doc.rect(20, yPos - headerHeight / 2, pageWidth - 40, headerHeight, "F");
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
