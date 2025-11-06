@@ -43,12 +43,12 @@ function createPieChartCanvas(tasks: Activity[]): HTMLCanvasElement {
   const total = stats.bloqueada + stats.desenvolvimento + stats.backlog;
   if (total === 0) return canvas;
 
-  const colors = ["#ec3636", "#0FC882", "#3B82F5"];
-  const labels = ["Bloqueadas", "Desenvolvimento", "Backlog"];
+  const colors = ["#3B82F5", "#0FC882", "#ec3636"];
+  const labels = ["Backlog", "Desenvolvimento", "Bloqueadas"];
   const data = [
-    { label: labels[0], value: stats.bloqueada, color: colors[0] },
+    { label: labels[0], value: stats.backlog, color: colors[0] },
     { label: labels[1], value: stats.desenvolvimento, color: colors[1] },
-    { label: labels[2], value: stats.backlog, color: colors[2] },
+    { label: labels[2], value: stats.bloqueada, color: colors[2] },
   ].filter((d) => d.value > 0);
 
   // Gráfico de pizza
@@ -282,7 +282,7 @@ export async function generatePDF(activities: Activity[]) {
   y = cardY - 40;
 
   // === AGRUPAR POR STATUS ===
-  const statusOrder = ["Bloqueada", "Backlog", "Em Desenvolvimento"];
+  const statusOrder = ["Backlog", "Em Desenvolvimento", "Bloqueada"];
   const statusColors: Record<string, any> = {
     "Bloqueada": rgb(0.93, 0.21, 0.21),
     "Backlog": rgb(0.23, 0.51, 0.96),
@@ -298,10 +298,15 @@ export async function generatePDF(activities: Activity[]) {
 
   const contentWidth = width - margin * 2;
 
-  for (const group of grouped) {
+  for (let groupIndex = 0; groupIndex < grouped.length; groupIndex++) {
+    const group = grouped[groupIndex];
     if (group.count === 0) continue;
 
-    if (y < 180) {
+    // Adiciona nova página para cada seção (exceto a primeira)
+    if (groupIndex > 0 && grouped[groupIndex - 1].count > 0) {
+      page = pdfDoc.addPage([595.28, 841.89]);
+      y = height - margin;
+    } else if (y < 180) {
       page = pdfDoc.addPage([595.28, 841.89]);
       y = height - margin;
     }
