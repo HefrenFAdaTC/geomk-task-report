@@ -168,7 +168,7 @@ const JsonImporter = ({ onImport }: JsonImporterProps) => {
     "status": "Em Desenvolvimento",
     "title": "Título da atividade",
     "estimativa": 8,
-    "contagem_apf": 47,
+    "contagem_apf": null,
     "description": "Descrição detalhada"
   }
 ]`}

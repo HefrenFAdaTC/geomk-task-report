@@ -37,10 +37,18 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
 
   const handleFormSubmit = (data: Omit<Task, "id">) => {
     // Convert empty strings or "null" to default values
+    const parseValue = (val: any): number => {
+      if (!val || val === '' || (typeof val === 'string' && val.toLowerCase() === 'null')) {
+        return 1;
+      }
+      const num = typeof val === 'number' ? val : parseFloat(val);
+      return isNaN(num) ? 1 : num;
+    };
+
     const cleanedData = {
       ...data,
-      tempoEstimado: data.tempoEstimado || 1,
-      pontoFuncao: data.pontoFuncao || 1,
+      tempoEstimado: parseValue(data.tempoEstimado),
+      pontoFuncao: parseValue(data.pontoFuncao),
       tipo: data.tipo && data.tipo.toLowerCase() !== "null" ? data.tipo : "Sem Sistema",
     };
     onSubmit(cleanedData);
@@ -84,10 +92,8 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
               <Label htmlFor="tempoEstimado">Tempo Estimado (dias)</Label>
               <Input
                 id="tempoEstimado"
-                type="number"
-                min="0"
-                placeholder="1"
-                {...register("tempoEstimado", { valueAsNumber: true })}
+                placeholder="1 ou null"
+                {...register("tempoEstimado")}
               />
               <p className="text-xs text-muted-foreground">Deixe vazio ou digite "null" para valor padrão (1 dia)</p>
             </div>
@@ -96,10 +102,8 @@ const TaskForm = ({ task, onSubmit, onCancel }: TaskFormProps) => {
               <Label htmlFor="pontoFuncao">Ponto de Função</Label>
               <Input
                 id="pontoFuncao"
-                type="number"
-                min="0"
-                placeholder="1"
-                {...register("pontoFuncao", { valueAsNumber: true })}
+                placeholder="1 ou null"
+                {...register("pontoFuncao")}
               />
               <p className="text-xs text-muted-foreground">Deixe vazio ou digite "null" para valor padrão (1 ponto)</p>
             </div>
