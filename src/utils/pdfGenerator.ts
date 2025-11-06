@@ -43,12 +43,12 @@ function createPieChartCanvas(tasks: Activity[]): HTMLCanvasElement {
   const total = stats.bloqueada + stats.desenvolvimento + stats.backlog;
   if (total === 0) return canvas;
 
-  const colors = ["#3B82F5", "#0FC882", "#ec3636"];
-  const labels = ["Backlog", "Desenvolvimento", "Bloqueadas"];
+  const colors = ["#ec3636", "#0FC882", "#3B82F5"];
+  const labels = ["Bloqueadas", "Desenvolvimento", "Backlog"];
   const data = [
-    { label: labels[0], value: stats.backlog, color: colors[0] },
+    { label: labels[0], value: stats.bloqueada, color: colors[0] },
     { label: labels[1], value: stats.desenvolvimento, color: colors[1] },
-    { label: labels[2], value: stats.bloqueada, color: colors[2] },
+    { label: labels[2], value: stats.backlog, color: colors[2] },
   ].filter((d) => d.value > 0);
 
   // Gráfico de pizza
@@ -282,7 +282,7 @@ export async function generatePDF(activities: Activity[]) {
   y = cardY - 40;
 
   // === AGRUPAR POR STATUS ===
-  const statusOrder = ["Backlog", "Em Desenvolvimento", "Bloqueada"];
+  const statusOrder = ["Bloqueada", "Em Desenvolvimento", "Backlog"];
   const statusColors: Record<string, any> = {
     "Bloqueada": rgb(0.93, 0.21, 0.21),
     "Backlog": rgb(0.23, 0.51, 0.96),
