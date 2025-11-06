@@ -12,12 +12,12 @@ interface JsonImporterProps {
 
 // Schema for the new JSON structure from uploaded files
 const uploadedTaskSchema = z.object({
-  ticket: z.union([z.number(), z.string()]),
-  sistema: z.string().nullable().optional(),
+  ticket: z.union([z.number(), z.string(), z.null()]),
+  sistema: z.union([z.string(), z.null()]).optional(),
   status: z.string(),
   title: z.string().min(1, "Título é obrigatório"),
-  estimativa: z.union([z.number(), z.string()]).nullable().optional(),
-  contagem_apf: z.union([z.number(), z.string()]).nullable().optional(),
+  estimativa: z.union([z.number(), z.string(), z.null()]).optional(),
+  contagem_apf: z.union([z.number(), z.string(), z.null()]).optional(),
   description: z.string().min(1, "Descrição é obrigatória"),
 });
 
@@ -59,25 +59,29 @@ const JsonImporter = ({ onImport }: JsonImporterProps) => {
       const validatedData = jsonSchema.parse(data);
 
       // Helpers to normalize values
-      const parseNumber = (val: any, def: number = 1): number => {
+      const parseNumber = (val: any, def: number = 0): number => {
         if (val === undefined || val === null) return def;
-        if (typeof val === "number") return isNaN(val) ? def : val;
+        if (typeof val === "number") {
+          if (isNaN(val)) return def;
+          return Math.max(0, val); // Ensure non-negative
+        }
         if (typeof val === "string") {
           const trimmed = val.trim().toLowerCase();
           if (trimmed === "" || trimmed === "null") return def;
           const num = parseFloat(trimmed.replace(",", "."));
-          return isNaN(num) ? def : num;
+          if (isNaN(num)) return def;
+          return Math.max(0, num); // Ensure non-negative
         }
         return def;
       };
       const parseSystem = (val: any): string => {
-        if (val === undefined || val === null) return "Sem Sistema";
+        if (val === undefined || val === null) return "null";
         if (typeof val === "string") {
           const trimmed = val.trim();
-          if (trimmed === "" || trimmed.toLowerCase() === "null") return "Sem Sistema";
+          if (trimmed === "" || trimmed.toLowerCase() === "null") return "null";
           return trimmed;
         }
-        return "Sem Sistema";
+        return "null";
       };
 
       // Map to internal structure
@@ -85,7 +89,9 @@ const JsonImporter = ({ onImport }: JsonImporterProps) => {
         // Check if it's the new format or original format
         if ("title" in item) {
           // New format - map fields
-          const ticketStr = typeof item.ticket === "number" 
+          const ticketStr = item.ticket === null || item.ticket === undefined
+            ? "#N/A"
+            : typeof item.ticket === "number" 
             ? `#${item.ticket}` 
             : item.ticket.startsWith("#") ? item.ticket : `#${item.ticket}`;
           
@@ -103,8 +109,8 @@ const JsonImporter = ({ onImport }: JsonImporterProps) => {
             titulo: item.title,
             ticket: ticketStr,
             descricao: item.description,
-            tempoEstimado: parseNumber(item.estimativa, 1),
-            pontoFuncao: parseNumber(item.contagem_apf, 1),
+            tempoEstimado: parseNumber(item.estimativa, 0),
+            pontoFuncao: parseNumber(item.contagem_apf, 0),
             status: status,
             tipo: parseSystem(item.sistema),
           };
