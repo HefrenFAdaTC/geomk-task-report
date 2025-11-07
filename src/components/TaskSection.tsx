@@ -26,6 +26,8 @@ const TaskSection = ({ title, tasks, statusColor, onEdit, onDelete, onClearAll }
 
   if (tasks.length === 0) return null;
 
+  const totalPontos = tasks.reduce((sum, task) => sum + task.pontoFuncao, 0);
+
   return (
     <Card className="mb-4">
       <CardHeader className="cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
@@ -33,6 +35,9 @@ const TaskSection = ({ title, tasks, statusColor, onEdit, onDelete, onClearAll }
           <div className="flex items-center gap-3">
             <CardTitle className="text-lg">{title}</CardTitle>
             <Badge className={statusColor}>{tasks.length}</Badge>
+            <Badge variant="secondary" className="bg-muted text-foreground">
+              {totalPontos} pontos de função
+            </Badge>
           </div>
           <div className="flex items-center gap-2">
             <Button

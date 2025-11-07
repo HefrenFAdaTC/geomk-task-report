@@ -302,6 +302,9 @@ export async function generatePDF(activities: Activity[]) {
     const group = grouped[groupIndex];
     if (group.count === 0) continue;
 
+    // Calcula total de pontos da seção
+    const totalPontosSecao = group.activities.reduce((sum, a) => sum + a.pontoFuncao, 0);
+
     // Adiciona nova página para cada seção (exceto a primeira)
     if (groupIndex > 0 && grouped[groupIndex - 1].count > 0) {
       page = pdfDoc.addPage([595.28, 841.89]);
@@ -326,8 +329,8 @@ export async function generatePDF(activities: Activity[]) {
       font: fontBold,
       color: rgb(1, 1, 1),
     });
-    page.drawText(group.count.toString(), {
-      x: width - margin - 40,
+    page.drawText(`${group.count} atividades • ${totalPontosSecao} pontos de função`, {
+      x: width - margin - 200,
       y: y - 20,
       size: fontSize,
       font: fontBold,
